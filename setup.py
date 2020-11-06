@@ -7,7 +7,7 @@ with open("README.md", "rb") as f:
 
 setup(
     name="ApiLayer",
-    version="0.0.3",
+    version="0.0.4",
     author="lipo",
     author_email="lipo8081@gmail.com",
     description="Basic Api Layer",

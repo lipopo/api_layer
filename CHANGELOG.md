@@ -11,6 +11,10 @@
 - tencent v3 auth
 - tencent update_function_code action
 
-### v0.0.3
-
+## v0.0.3
+### Added
 - fix tencent scf_update_function exception
+
+## v0.0.4
+### Added
+- add tencent object get action

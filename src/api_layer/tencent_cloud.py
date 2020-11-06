@@ -1,22 +1,26 @@
 """
 腾讯云API
 """
+import json
+from contextlib import contextmanager
 from datetime import datetime
 import time
 from typing import Dict, BinaryIO, Union
 from hmac import HMAC
-from hashlib import sha1
+from hashlib import sha1, sha256
 from urllib import parse
 
 from requests.auth import AuthBase
 
-from api_layer.api import BasicApi, Action, Hooks, Protocol
+from api_layer.api import BasicApi, Action, Protocol
 
 
 class TencentAuth(AuthBase):
     sign_key = ""
     key_time = ""
     expire_time = -1
+    sign_mode = None
+    service_name = None
 
     def __init__(self, config):
         self.expire_seconds = config.expire_seconds or 10
@@ -88,7 +92,7 @@ class TencentAuth(AuthBase):
         elif self.mode == "args":
             r.prepare_url(r.url, signature)
 
-    def __call__(self, r):
+    def custom_auth(self, r):
         if time.time() > self.expire_time:
             self.build()
         pk, v = self.build_kv(r.path_url)
@@ -113,6 +117,77 @@ class TencentAuth(AuthBase):
         }
         self.use_signature(signature, r)
         return r
+
+    def v3_auth(self, r):
+        body_dict = json.loads(r.body or "{}")
+        method = r.method.upper()
+        path_url = r.path_url.split("?")
+        uri = path_url[0]
+        query = path_url[1] if len(path_url) != 1 else ""
+
+        hkv = list(zip(
+            [i.lower() for i in r.headers.keys()], r.headers.values()))
+        hkv.sort()
+        cheaders = "\n".join([f"{k}:{v.lower()}" for k, v in hkv]) + "\n"
+
+        signed_headers = ";".join([i for i, _ in hkv])
+        body = b"" if r.body is None else r.body \
+            if isinstance(r.body, bytes) else r.body.encode("utf8")
+        hash_request_payload = sha256(body).hexdigest()
+        ws = "\n".join((
+            method, uri, query, cheaders,
+            signed_headers, hash_request_payload))
+
+        al = "TC3-HMAC-SHA256"
+        rt = int(time.time())
+        cs = datetime.utcfromtimestamp(rt).strftime("%Y-%m-%d") + "/" + \
+            self.service_name.lower() + "/tc3_request"
+        hcr = sha256(ws.encode("utf8")).hexdigest()
+        ws2 = "\n".join((al, str(rt), cs, hcr))
+
+        sd = HMAC(
+            ("TC3" + self.secret_key).encode("utf8"),
+            datetime.utcfromtimestamp(rt).strftime("%Y-%m-%d").encode("utf8"),
+            "SHA256").digest()
+        ss = HMAC(
+            sd,
+            self.service_name.encode("utf8"),
+            "SHA256").digest()
+        ss2 = HMAC(
+            ss,
+            b"tc3_request",
+            "SHA256").digest()
+        signature = HMAC(
+            ss2,
+            ws2.encode("utf8"),
+            "SHA256").hexdigest()
+        authorization = al + " Credential=" + \
+            self.secret_id + "/" + cs + ", " + \
+            "SignedHeaders=" + signed_headers + \
+            ", Signature=" + signature
+
+        qs = dict([_q.split("=", 1) for _q in query.split("&") if query])
+        qs.update(body_dict)
+
+        r.headers["Authorization"] = authorization
+        r.headers["X-TC-Action"] = qs.get("Action")
+        r.headers["X-TC-Version"] = qs.get("Version")
+        r.headers["X-TC-Region"] = qs.get("Region")
+        r.headers["X-TC-Timestamp"] = str(rt)
+        return r
+
+    @contextmanager
+    def use_v3(self, service_name):
+        self.sign_mode = "v3"
+        self.service_name = service_name
+        yield
+        self.sign_mode = None
+
+    def __call__(self, r):
+        if self.sign_mode == "v3":
+            return self.v3_auth(r)
+        else:
+            return self.custom_auth(r)
 
 
 class TencentCloudApi(BasicApi):
@@ -173,7 +248,7 @@ class TencentCloudApi(BasicApi):
             "data": content
         }
 
-    @Action(action_type="POST")
+    @Action(action_type="GET")
     def scf_put_function(
             self,
             region: str,
@@ -202,13 +277,11 @@ class TencentCloudApi(BasicApi):
         :param env_id: environment id
         :param publish: publish mode true means deirect deploy default is flase
         :param code: source code
-        :param code_source: code's origin (zip, cos, git) must be use when by git
+        :param code_source: code's origin (zip, cos, git)
         """
-
-        url = f"https://scf.tencentcloudapi.com"
+        url = "https://scf.tencentcloudapi.com"
 
         basic_dict = {
-            "url": url,
             "Action": "UpdateFunctionCode",
             "Version": "2018-04-16",
             "Region": region,
@@ -232,4 +305,11 @@ class TencentCloudApi(BasicApi):
             if v:
                 basic_dict[k] = v
 
-        return basic_dict
+        return {
+            "url": url,
+            "params": basic_dict,
+            "headers": {
+                "Host": "scf.tencentcloudapi.com",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+        }

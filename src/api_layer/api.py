@@ -140,7 +140,9 @@ class HttpProtocolTool(ProtocolTool):
             method=method,
             url=url + payload.pop("path", "/"),
             auth=self.basic_auth,
-            hooks={"response": self.basic_hooks + payload.pop("hooks", [])},
+            hooks={
+                "response": self.basic_hooks + payload.pop("hooks", [])
+            },
             **payload
         )
         prepped = req.prepare()

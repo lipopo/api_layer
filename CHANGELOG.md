@@ -5,8 +5,12 @@
 
 - Setup Api Struct
 
-## v0.0.1
+## v0.0.2
 ### Added
 
 - tencent v3 auth
 - tencent update_function_code action
+
+### v0.0.3
+
+- fix tencent scf_update_function exception

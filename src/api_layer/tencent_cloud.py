@@ -312,4 +312,5 @@ class TencentCloudApi(BasicApi):
                 "Host": "scf.tencentcloudapi.com",
                 "Content-Type": "application/x-www-form-urlencoded"
             },
+            "data": ""
         }

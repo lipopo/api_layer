@@ -249,6 +249,27 @@ class TencentCloudApi(BasicApi):
         }
 
     @Action(action_type="GET")
+    def cos_get_object(
+            self,
+            object_key: str,
+            bucket_name: str,
+            app_id: str,
+            region: str
+    ):
+        """
+        cos文件上传
+        :param object_key: 文件路径
+        :param bucket_name: 存储桶名称
+        :param app_id: 应用名称
+        :param region: 区域名称
+        """
+        url = f"https://{bucket_name}-{app_id}.cos.{region}.myqcloud.com"
+        return {
+            "url": url,
+            "path": object_key,
+        }
+
+    @Action(action_type="GET")
     def scf_put_function(
             self,
             region: str,

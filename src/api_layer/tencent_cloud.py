@@ -172,3 +172,64 @@ class TencentCloudApi(BasicApi):
             },
             "data": content
         }
+
+    @Action(action_type="POST")
+    def scf_put_function(
+            self,
+            region: str,
+            handler: str,
+            func_name: str,
+            cos_bucket_name: str = "",
+            cos_object_key: str = "",
+            cos_bucket_region: str = "",
+            zip_file: str = "",
+            namespace: str = "",
+            env_id: str = "",
+            publish: str = "False",
+            code: str = "",
+            code_source: str = ""
+    ):
+        """
+        scf函数更新
+        :param region: 函数所在区域
+        :param handler: 函数的主入口
+        :param func_name: 函数名称
+        :param cos_bucket_name: 指定的cos的bucket的名称
+        :param cos_object_key: 指定的cos的object_key
+        :param cos_bucket_region: 指定的cos存储桶的区域
+        :param zip_file: zipfile b64file
+        :param namespace: scf namepspace
+        :param env_id: environment id
+        :param publish: publish mode true means deirect deploy default is flase
+        :param code: source code
+        :param code_source: code's origin (zip, cos, git) must be use when by git
+        """
+
+        url = f"https://scf.tencentcloudapi.com"
+
+        basic_dict = {
+            "url": url,
+            "Action": "UpdateFunctionCode",
+            "Version": "2018-04-16",
+            "Region": region,
+            "Handler": handler,
+            "FunctionName": func_name,
+        }
+
+        extra_param_set = (
+            ("CosBucketName", cos_bucket_name),
+            ("CosObjectName", cos_object_key),
+            ("CosBucketRegion", cos_bucket_region),
+            ("ZipFile", zip_file),
+            ("Namespace", namespace),
+            ("EnvId", env_id),
+            ("Publish", publish),
+            ("Code", code),
+            ("CodeSource", code_source)
+        )
+
+        for k, v in extra_param_set:
+            if v:
+                basic_dict[k] = v
+
+        return basic_dict

@@ -4,6 +4,7 @@ python:
 branches:
   only:
     - master
+    - develop
     - /^release\/*$/
 before_install:
   - pip install wheel twine

@@ -6,7 +6,7 @@ branches:
     - master
     - /^release\/*$/
 before_install:
-  - pip install --user wheel twine
+  - pip install wheel twine
 scripts:
   - python ./setup.py sdist bdist
 

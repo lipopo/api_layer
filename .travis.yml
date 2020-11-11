@@ -9,5 +9,5 @@ before_install:
   - pip install wheel twine
 scripts:
   - python ./setup.py sdist bdist
-  - python -m twine -u upload $pypi_username -p $pypi_password ./dist/*
+  - python -m twine upload ./dist/*
 

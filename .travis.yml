@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6"
+branches:
+  only:
+    - master
+    - /^release\/*$/
+before_install:
+  - pip install --user wheel twine
+scripts:
+  - python ./setup.py sdist bdist
+

@@ -1,9 +1,11 @@
 """
 腾讯云API
 """
+import base64
 import json
 from contextlib import contextmanager
 from datetime import datetime
+import random
 import time
 from typing import Dict, BinaryIO, Union
 from hmac import HMAC
@@ -20,6 +22,7 @@ class TencentAuth(AuthBase):
     key_time = ""
     expire_time = -1
     sign_mode = None
+    sign_method = None
     service_name = None
 
     def __init__(self, config):
@@ -177,6 +180,14 @@ class TencentAuth(AuthBase):
         return r
 
     @contextmanager
+    def basic(self, sign_method="SHA1"):
+        self.sign_mode = "basic"
+        self.sign_method = sign_method
+        yield
+        self.sign_mode = None
+        self.sign_method = None
+
+    @contextmanager
     def use_v3(self, service_name):
         self.sign_mode = "v3"
         self.service_name = service_name
@@ -186,6 +197,8 @@ class TencentAuth(AuthBase):
     def __call__(self, r):
         if self.sign_mode == "v3":
             return self.v3_auth(r)
+        elif self.sign_mode == "basic":
+            return r
         else:
             return self.custom_auth(r)
 
@@ -335,3 +348,235 @@ class TencentCloudApi(BasicApi):
             },
             "data": ""
         }
+
+    @Action
+    def dns_record_list(
+            self,
+            domain: str,
+            offset: int = 0,
+            length: int = 20,
+            sub_domain: Union[None, str] = None,
+            record_type: Union[None, str] = None,
+            q_project_id: Union[None, int] = None
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+
+        basic_dict = {
+            "Action": "RecordList",
+            "offset": offset,
+            "domain": domain,
+            "length": length
+        }
+
+        extra_param_set = (
+            ("subDomain", sub_domain),
+            ("recordType", record_type),
+            ("qProjectId", q_project_id)
+        )
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_record_create(
+            self,
+            domain: str,
+            sub_domain: str,
+            record_type: str,
+            record_line: str,
+            value: str,
+            ttl: int = 600,
+            mx: Union[None, int] = None
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+        basic_dict = {
+            "Action": "RecordCreate",
+            "domain": domain,
+            "subDomain": sub_domain,
+            "recordType": record_type,
+            "recordLine": record_line,
+            "value": value
+        }
+
+        extra_param_set = (
+            ("ttl", ttl),
+            ("mx", mx)
+        )
+
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_record_modify(
+            self,
+            domain: str,
+            record_id: int,
+            sub_domain: str,
+            record_type: str,
+            record_line: str,
+            value: str,
+            ttl: int = 600,
+            mx: Union[None, int] = None
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+        basic_dict = {
+            "Action": "RecordModify",
+            "recordId": record_id,
+            "domain": domain,
+            "subDomain": sub_domain,
+            "recordType": record_type,
+            "recordLine": record_line,
+            "value": value
+        }
+
+        extra_param_set = (
+            ("ttl", ttl),
+            ("mx", mx)
+        )
+
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_record_status(
+            self,
+            domain: str,
+            record_id: int,
+            status: str
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+        basic_dict = {
+            "Action": "RecordStatus",
+            "recordId": record_id,
+            "domain": domain,
+            "status": status
+        }
+
+        extra_param_set = ()
+
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_record_delete(
+            self,
+            domain: str,
+            record_id: int
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+        basic_dict = {
+            "Action": "RecordDelete",
+            "domain": domain,
+            "recordId": record_id
+        }
+        return self.dns_build_params(url, "get", basic_dict, ())
+    
+    @Action
+    def dns_domain_create(
+            self,
+            domain: str,
+            project_id: Union[None, int] = None
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+
+        basic_dict = {
+            "Action": "DomainCreate",
+            "domain": domain
+        }
+
+        extra_param_set = (
+            ("projectId", project_id),
+        )
+
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_domain_status(
+            self,
+            domain: str,
+            status: str
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+
+        basic_dict = {
+            "Action": "SetDomainStatus",
+            "domain": domain,
+            "status": status
+        }
+
+        return self.dns_build_params(url, "get", basic_dict)
+
+    @Action
+    def dns_domain_list(
+            self,
+            offset: int = 0,
+            length: int = 20,
+            q_project_id: Union[None, int] = None
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+
+        basic_dict = {
+            "Action": "DomainList",
+            "offset": offset,
+            "length": length
+        }
+
+        extra_param_set = (
+            ("qProjectId", q_project_id),
+        )
+
+        return self.dns_build_params(url, "get", basic_dict, extra_param_set)
+
+    @Action
+    def dns_domain_delete(
+            self,
+            domain: str,
+    ):
+        url = "cns.api.qcloud.com/v2/index.php"
+
+        basic_dict = {
+            "Action": "DomainDelete",
+            "domain": domain
+        }
+
+        return self.dns_build_params(url, "get", basic_dict)
+
+    def dns_build_params(self, url, method, basic_dict, extra_param_set = ()):
+        url_base = "https://" + url
+        for k, v in extra_param_set:
+            if v:
+                basic_dict[k] = v
+
+        basic_dict = self.signature_request(
+            method,
+            "cns.api.qcloud.com/v2/index.php",
+            basic_dict)
+
+        return {
+            "url": url_base,
+            "params": basic_dict,
+            "headers": {},
+            "path": ""
+        }
+
+        
+
+    def signature_request(self, method, url, params):
+        params["Timestamp"] = int(time.time())
+        params["Nonce"] = random.randint(10000, 99999)
+        params["SignatureMethod"] = f"Hmac{self.auth.sign_method}"
+        params["SecretId"] = self.auth.secret_id
+
+        klist = sorted(params.keys())
+        plist = []
+        for k in klist:
+            plist.append(f"{k}={params.get(k)}")
+
+        # build str
+        src_str = f"{method.upper()}{url}?{'&'.join(plist)}"
+
+        sign_str = base64.b64encode(
+            HMAC(
+                self.auth.secret_key.encode("utf8"),
+                src_str.encode("utf8"),
+                self.auth.sign_method.lower()
+                ).digest()
+            )
+        params["Signature"] = sign_str
+
+        return params

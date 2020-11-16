@@ -18,3 +18,8 @@
 ## v0.0.4
 ### Added
 - add tencent object get action
+
+## v0.0.5
+### Addes
+- tencent dns domain action
+- tencent dns record action

@@ -244,6 +244,7 @@ class TencentCloudApi(BasicApi):
     ):
         """
         cos文件上传
+
         :param object_key: 文件路径
         :param bucket_name: 存储桶名称
         :param app_id: 应用名称
@@ -259,6 +260,44 @@ class TencentCloudApi(BasicApi):
                 "content-type": content_type
             },
             "data": content
+        }
+
+    @Action(action_type="PUT")
+    def cos_copy_object(
+        self,
+        object_key: str,
+        bucket_name: str,
+        app_id: str,
+        region: str,
+        source_key: str,
+        source_bucket_name: Union[str, None] = None,
+        source_app_id: Union[str, None] = None,
+        source_region: Union[str, None] = None,
+    ):
+        """
+        cos文件复制
+
+        :param object_key: 需要复制的文件路径
+        :param bucket_name: 桶名称
+        :param app_id: 应用名称
+        :param region: 区域名称
+        :param source_key: 源键
+        :param source_bucket_name: 源桶
+        :param source_app_id: 源app-id
+        :param source_region: 源区域
+        """
+        url = f"https://{bucket_name}-{app_id}.cos.{region}.myqcloud.com"
+
+        return {
+            "url": url,
+            "path": object_key,
+            "headers": {
+                "x-cos-copy-source": (
+                    f"{source_bucket_name or bucket_name}-"
+                    f"{source_app_id or app_id}.cos.{source_region or region}."
+                    f"myqcloud.com/{source_key}"
+                )
+            }
         }
 
     @Action(action_type="GET")
